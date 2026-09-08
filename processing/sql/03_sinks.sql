@@ -7,18 +7,22 @@ CREATE TABLE raw_events_sink
     text STRING
 ) WITH (
     'connector' = 'jdbc',
-    'url' = 'jdbc:clickhouse://${CLICKHOUSE_HOST}:8123/default',
+    'url' = 'jdbc:mysql://${CLICKHOUSE_HOST}:9004/default',
+    'username' = 'flink',
+    'password' = '',
     'table-name' = 'raw_events'
 );
 
 CREATE TABLE agg_events_per_minute_sink
 (
-    minute TIMESTAMP(3),
+    `minute` TIMESTAMP(3),
     kind STRING,
     events BIGINT
 ) WITH (
     'connector' = 'jdbc',
-    'url' = 'jdbc:clickhouse://${CLICKHOUSE_HOST}:8123/default',
+    'url' = 'jdbc:mysql://${CLICKHOUSE_HOST}:9004/default',
+    'username' = 'flink',
+    'password' = '',
     'table-name' = 'agg_events_per_minute_raw'
 );
 

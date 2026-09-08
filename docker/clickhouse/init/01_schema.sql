@@ -25,3 +25,14 @@ SELECT
     countState() AS events
 FROM raw_events
 GROUP BY minute, kind;
+
+-- Agregado calculado pelo Flink (janela tumbling), usado para reconciliação
+-- contra a materialized view acima, que é recalculada de forma independente.
+CREATE TABLE agg_events_per_minute_raw
+(
+    minute DateTime,
+    kind String,
+    events UInt64
+)
+ENGINE = MergeTree
+ORDER BY (minute, kind);

@@ -1,0 +1,90 @@
+{
+  "title": "Bluesky Pipeline Overview",
+  "uid": "bsky-pipeline-overview",
+  "schemaVersion": 39,
+  "editable": true,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Eventos (última 1h)",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "format": 1,
+          "queryType": "sql",
+          "rawSql": "SELECT count() AS events FROM raw_events WHERE $__timeFilter(event_time)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Eventos por idioma (última 1h, top 10)",
+      "type": "piechart",
+      "gridPos": { "h": 12, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "format": 1,
+          "queryType": "sql",
+          "rawSql": "SELECT if(lang = '', 'desconhecido', lang) AS lang, count() AS events FROM raw_events WHERE $__timeFilter(event_time) GROUP BY lang ORDER BY events DESC LIMIT 10",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Eventos mais recentes",
+      "type": "table",
+      "gridPos": { "h": 12, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "format": 1,
+          "queryType": "sql",
+          "rawSql": "SELECT event_time AS time, kind, lang, text FROM raw_events ORDER BY event_time DESC LIMIT 20",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Eventos por minuto (por tipo)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "format": 2,
+          "queryType": "sql",
+          "rawSql": "SELECT minute AS time, kind, countMerge(events) AS events FROM agg_events_per_minute WHERE $__timeFilter(minute) GROUP BY minute, kind ORDER BY minute",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Reconciliação: Flink vs ClickHouse MV (eventos/min)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "format": 2,
+          "queryType": "sql",
+          "rawSql": "SELECT minute AS time, 'flink' AS source, events FROM agg_events_per_minute_raw WHERE $__timeFilter(minute) AND kind = 'post'\nUNION ALL\nSELECT minute AS time, 'clickhouse_mv' AS source, countMerge(events) AS events FROM agg_events_per_minute WHERE $__timeFilter(minute) AND kind = 'post' GROUP BY minute\nORDER BY time",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}
