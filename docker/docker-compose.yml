@@ -30,15 +30,25 @@ services:
         hard: 262144
 
   flink-jobmanager:
-    build: ./flink
+    build:
+      context: ..
+      dockerfile: docker/flink/Dockerfile
     ports:
       - "8082:8081"
-    command: jobmanager
+    depends_on:
+      - kafka
+      - clickhouse
+    command: standalone-job --job-classname com.realtimepipeline.PipelineJob
     environment:
-      FLINK_PROPERTIES: "jobmanager.rpc.address: flink-jobmanager"
+      FLINK_PROPERTIES: "jobmanager.rpc.address: flink-jobmanager\nrestart-strategy.type: fixed-delay\nrestart-strategy.fixed-delay.attempts: 2147483647\nrestart-strategy.fixed-delay.delay: 10 s"
+      KAFKA_TOPIC: ${KAFKA_TOPIC}
+      KAFKA_BOOTSTRAP: kafka:9092
+      CLICKHOUSE_HOST: clickhouse
 
   flink-taskmanager:
-    build: ./flink
+    build:
+      context: ..
+      dockerfile: docker/flink/Dockerfile
     depends_on:
       - flink-jobmanager
     command: taskmanager

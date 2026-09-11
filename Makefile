@@ -1,4 +1,4 @@
-.PHONY: up down logs reset flink-submit
+.PHONY: up down logs reset
 
 up:
 	cp -n .env.example .env || true
@@ -13,9 +13,3 @@ logs:
 
 reset:
 	docker compose -f docker/docker-compose.yml down -v
-
-flink-submit:
-	KAFKA_TOPIC=$$(grep '^KAFKA_TOPIC=' .env | cut -d= -f2) \
-	KAFKA_BOOTSTRAP=kafka:9092 \
-	CLICKHOUSE_HOST=clickhouse \
-	./processing/submit.sh
