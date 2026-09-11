@@ -20,3 +20,9 @@ RUN wget -q -P /opt/flink/lib \
     https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.49/mysql-connector-java-5.1.49.jar
 
 COPY --from=build /build/processing/jobs/pipeline-job/target/pipeline-job.jar /opt/flink/usrlib/pipeline-job.jar
+
+# O processo do Flink roda como usuario "flink" (via gosu no entrypoint),
+# entao o diretorio de checkpoints precisa ja nascer com esse dono: quando
+# o volume nomeado do compose for criado, o Docker copia o conteudo (e a
+# propriedade) deste caminho da imagem para dentro do volume.
+RUN mkdir -p /opt/flink/checkpoints && chown -R flink:flink /opt/flink/checkpoints

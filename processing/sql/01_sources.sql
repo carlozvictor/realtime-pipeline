@@ -12,7 +12,8 @@ CREATE TABLE raw_events_source
     'topic' = '${KAFKA_TOPIC}',
     'properties.bootstrap.servers' = '${KAFKA_BOOTSTRAP}',
     'properties.group.id' = 'flink-analytics',
-    'scan.startup.mode' = 'earliest-offset',
+    'scan.startup.mode' = 'group-offsets',
+    'properties.auto.offset.reset' = 'earliest',
     'format' = 'json',
     'json.ignore-parse-errors' = 'true'
 );
