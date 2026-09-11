@@ -40,7 +40,7 @@ services:
       - clickhouse
     command: standalone-job --job-classname com.realtimepipeline.PipelineJob
     environment:
-      FLINK_PROPERTIES: "jobmanager.rpc.address: flink-jobmanager\nrestart-strategy.type: fixed-delay\nrestart-strategy.fixed-delay.attempts: 2147483647\nrestart-strategy.fixed-delay.delay: 10 s\nexecution.checkpointing.interval: 30 s\nexecution.checkpointing.mode: EXACTLY_ONCE\nstate.checkpoints.dir: file:///opt/flink/checkpoints"
+      FLINK_PROPERTIES: "jobmanager.rpc.address: flink-jobmanager\nrestart-strategy.type: fixed-delay\nrestart-strategy.fixed-delay.attempts: 2147483647\nrestart-strategy.fixed-delay.delay: 10 s\nexecution.checkpointing.interval: 30 s\nexecution.checkpointing.mode: EXACTLY_ONCE\nstate.checkpoints.dir: file:///opt/flink/checkpoints\nmetrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory\nmetrics.reporter.prom.port: 9249"
       KAFKA_TOPIC: ${KAFKA_TOPIC}
       KAFKA_BOOTSTRAP: kafka:9092
       CLICKHOUSE_HOST: clickhouse
@@ -55,9 +55,25 @@ services:
       - flink-jobmanager
     command: taskmanager
     environment:
-      FLINK_PROPERTIES: "jobmanager.rpc.address: flink-jobmanager\ntaskmanager.numberOfTaskSlots: 4\nstate.checkpoints.dir: file:///opt/flink/checkpoints"
+      FLINK_PROPERTIES: "jobmanager.rpc.address: flink-jobmanager\ntaskmanager.numberOfTaskSlots: 4\nstate.checkpoints.dir: file:///opt/flink/checkpoints\nmetrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory\nmetrics.reporter.prom.port: 9249"
     volumes:
       - flink-checkpoints:/opt/flink/checkpoints
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:v1.10.0
+    command: ["--kafka.server=kafka:9092"]
+    depends_on:
+      - kafka
+
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - flink-jobmanager
+      - kafka-exporter
 
   grafana:
     image: grafana/grafana:11.3.0
@@ -68,6 +84,8 @@ services:
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
       GF_INSTALL_PLUGINS: grafana-clickhouse-datasource
+    depends_on:
+      - prometheus
 
   ingest:
     build: ../ingest

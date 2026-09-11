@@ -40,7 +40,10 @@ Depois:
 
 - Flink UI em `http://localhost:8082`
 - ClickHouse em `http://localhost:8123`
+- Prometheus em `http://localhost:9090`
 - Grafana em `http://localhost:3000` (login `admin`, senha em `GRAFANA_PASSWORD`)
+  - dashboard **Bluesky Pipeline Overview**: dados de negocio (eventos, idiomas, reconciliacao)
+  - dashboard **Pipeline Observability**: saude do pipeline (lag, checkpoints, throughput)
 
 `make down` para os servicos sem apagar dados (o volume do ClickHouse e dos
 checkpoints do Flink persiste).
@@ -56,7 +59,8 @@ docker/
   clickhouse/
     init/01_schema.sql      schema das tabelas e da materialized view
     config/                 protocolo MySQL habilitado + usuarios dedicados (flink, grafana)
-  grafana/provisioning/     datasource ClickHouse + dashboard provisionados automaticamente
+  grafana/provisioning/     datasources (ClickHouse, Prometheus) + dashboards provisionados automaticamente
+  prometheus/prometheus.yml scrape config: metricas do Flink e do Kafka Exporter
 ingest/                     producer Python: WebSocket -> Kafka
 processing/
   sql/                      fonte, transformacoes e sinks do pipeline (Flink SQL)
@@ -89,6 +93,20 @@ tests/                      testes unitarios, de integracao e de carga
   `raw_events` exatamente no instante de uma falha entre checkpoints. Uma
   engine `ReplacingMergeTree` no ClickHouse fecharia esse gap.
 
+## Observabilidade
+
+Métricas nativas do Flink (via `flink-metrics-prometheus`) e do Kafka (via
+`kafka-exporter`) são raspadas pelo Prometheus e visualizadas no dashboard
+**Pipeline Observability** do Grafana:
+
+- Consumer lag do tópico `bsky.events` (grupo `flink-analytics`)
+- Duração e tamanho do último checkpoint
+- Checkpoints completados vs. com falha
+- Restarts do job (esperado: 0 — qualquer valor > 0 indica que a estratégia
+  de restart precisou agir)
+- Throughput por estágio do pipeline (fonte, dedup, agregação, sinks)
+- Tasks em backpressure
+
 ## Configuração
 
 Todas as variáveis vêm de `.env`, criado a partir de `.env.example` no
@@ -110,4 +128,4 @@ Hoje só existe cobertura unitária para a normalização de eventos do Jetstrea
 - Testes de integração (Testcontainers com Kafka e ClickHouse reais) e CI
 - `ReplacingMergeTree` para fechar o gap de exactly-once no sink
 - TTL/retenção nas tabelas do ClickHouse
-- Observabilidade: consumer lag, métricas de checkpoint do Flink, alertas no Grafana
+- Alertas no Grafana sobre as métricas de observabilidade (lag alto, checkpoint com falha, restart do job)
